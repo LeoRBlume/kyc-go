@@ -8,4 +8,5 @@ import (
 type CustomerService interface {
 	Create(req requests.CreateCustomerRequest) (*models.Customer, error)
 	GetByID(id string) (*models.Customer, error)
+	Patch(id string, req requests.PatchCustomerRequest) (*models.Customer, error)
 }

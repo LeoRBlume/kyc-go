@@ -21,6 +21,8 @@ func WriteError(c *gin.Context, err error) {
 			status = http.StatusNotFound
 		case domain.ErrValidation:
 			status = http.StatusUnprocessableEntity
+		case domain.ErrConflict:
+			status = http.StatusConflict
 		default:
 			status = http.StatusInternalServerError
 		}

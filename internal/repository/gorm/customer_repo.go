@@ -27,3 +27,7 @@ func (r *CustomerRepo) FindByID(id string) (*models.Customer, error) {
 	}
 	return &c, nil
 }
+
+func (r *CustomerRepo) Update(customer *models.Customer) error {
+	return r.db.Save(customer).Error
+}

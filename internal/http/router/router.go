@@ -21,6 +21,8 @@ func NewRouter(deps Deps) *gin.Engine {
 	{
 		v1.POST("/customers", deps.Customer.Create)
 		v1.GET("/customers/:id", deps.Customer.GetByID)
+		v1.PATCH("/customers/:id", deps.Customer.Patch)
+
 	}
 
 	return r

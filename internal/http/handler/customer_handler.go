@@ -57,3 +57,25 @@ func (h *CustomerHandler) GetByID(c *gin.Context) {
 		UpdatedAt: customer.UpdatedAt,
 	})
 }
+
+func (h *CustomerHandler) Patch(c *gin.Context) {
+	id := c.Param("id")
+
+	var req requests.PatchCustomerRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		middleware.WriteBindError(c, err)
+		return
+	}
+
+	customer, err := h.service.Patch(id, req)
+	if err != nil {
+		middleware.WriteError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, responses.CustomerSummaryResponse{
+		ID:        customer.ID,
+		Status:    string(customer.Status),
+		UpdatedAt: customer.UpdatedAt,
+	})
+}

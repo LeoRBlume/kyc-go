@@ -63,3 +63,40 @@ func (s *CustomerService) GetByID(id string) (*models.Customer, error) {
 		"cause": err.Error(),
 	})
 }
+
+func (s *CustomerService) Patch(id string, req requests.PatchCustomerRequest) (*models.Customer, error) {
+	customer, err := s.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	if customer.Status != domain.StatusDraft {
+		return nil, &domain.DomainError{
+			Code:    "STATUS_CONFLICT",
+			Message: "customer cannot be modified in current status",
+			Details: map[string]any{
+				"currentStatus": customer.Status,
+				"allowedStatus": []string{string(domain.StatusDraft)},
+			},
+		}
+	}
+
+	if req.Type != nil {
+		if *req.Type != domain.CustomerTypeIndividual && *req.Type != domain.CustomerTypeBusiness {
+			return nil, domain.NewValidation("invalid customer type", map[string]any{
+				"type": *req.Type,
+			})
+		}
+		customer.Type = *req.Type
+	}
+
+	customer.UpdatedAt = time.Now()
+
+	if err := s.repo.Update(customer); err != nil {
+		return nil, domain.NewInternal("failed to update customer", map[string]any{
+			"cause": err.Error(),
+		})
+	}
+
+	return customer, nil
+}

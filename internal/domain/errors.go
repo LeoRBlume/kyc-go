@@ -7,6 +7,7 @@ type ErrorCode string
 const (
 	ErrNotFound   ErrorCode = "NOT_FOUND"
 	ErrValidation ErrorCode = "VALIDATION_ERROR"
+	ErrConflict   ErrorCode = "STATUS_CONFLICT"
 	ErrInternal   ErrorCode = "INTERNAL_ERROR"
 )
 
