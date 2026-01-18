@@ -1,0 +1,621 @@
+openapi: 3.0.3
+info:
+  title: KYC Simulation API
+  version: 1.0.0
+  description: >
+    API para simular um fluxo realista de KYC com pipeline assíncrona (jobs) usando SQLite como fila durável.
+servers:
+  - url: http://localhost:8080
+    description: Local
+tags:
+  - name: Customers
+  - name: Documents
+  - name: Checks
+  - name: Jobs
+
+paths:
+  /v1/kyc/customers:
+    post:
+      tags: [Customers]
+      summary: Create KYC customer case
+      operationId: createCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCustomerRequest"
+            examples:
+              individual:
+                value:
+                  type: INDIVIDUAL
+                  profile:
+                    fullName: "João Pedro Silva"
+                    cpf: "12345678909"
+                    birthDate: "1998-03-12"
+                    nationality: "BR"
+                  address:
+                    street: "Av. Paulista"
+                    number: "1000"
+                    city: "São Paulo"
+                    state: "SP"
+                    zip: "01310-100"
+                    country: "BR"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerCreatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/kyc/customers/{customerId}:
+    get:
+      tags: [Customers]
+      summary: Get customer case by id
+      operationId: getCustomer
+      parameters:
+        - $ref: "#/components/parameters/CustomerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetCustomerResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Customers]
+      summary: Patch customer data (only when status=DRAFT)
+      operationId: patchCustomer
+      parameters:
+        - $ref: "#/components/parameters/CustomerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchCustomerRequest"
+            examples:
+              patchAddress:
+                value:
+                  address:
+                    street: "Rua Augusta"
+                    number: "200"
+                    city: "São Paulo"
+                    state: "SP"
+                    zip: "01305-000"
+                    country: "BR"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerSummaryResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/kyc/customers/{customerId}/documents:
+    post:
+      tags: [Documents]
+      summary: Attach a document (metadata only)
+      operationId: createDocument
+      parameters:
+        - $ref: "#/components/parameters/CustomerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDocumentRequest"
+            examples:
+              idFront:
+                value:
+                  kind: ID_FRONT
+                  fileUrl: "https://files.example.com/kyc/id-front.jpg"
+      responses:
+        "201":
+          description: Document registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+    get:
+      tags: [Documents]
+      summary: List documents for a customer
+      operationId: listDocuments
+      parameters:
+        - $ref: "#/components/parameters/CustomerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListDocumentsResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/kyc/customers/{customerId}/submit:
+    post:
+      tags: [Customers]
+      summary: Submit customer case for review (DRAFT -> SUBMITTED)
+      operationId: submitCustomer
+      parameters:
+        - $ref: "#/components/parameters/CustomerId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+      responses:
+        "200":
+          description: Submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmitResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/kyc/customers/{customerId}/checks/run:
+    post:
+      tags: [Checks]
+      summary: Enqueue async checks job (SUBMITTED/IN_REVIEW)
+      operationId: enqueueChecks
+      parameters:
+        - $ref: "#/components/parameters/CustomerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnqueueChecksRequest"
+            examples:
+              runDefault:
+                value:
+                  checks: ["CPF_CNPJ","SANCTIONS","PEP","FACE_MATCH"]
+      responses:
+        "202":
+          description: Job queued (or returned if already active)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnqueueChecksResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/kyc/customers/{customerId}/checks:
+    get:
+      tags: [Checks]
+      summary: List check results for a customer
+      operationId: listChecks
+      parameters:
+        - $ref: "#/components/parameters/CustomerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListChecksResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/kyc/jobs/{jobId}:
+    get:
+      tags: [Jobs]
+      summary: Get job status and progress
+      operationId: getJob
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetJobResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  parameters:
+    CustomerId:
+      name: customerId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    JobId:
+      name: jobId
+      in: path
+      required: true
+      schema:
+        type: string
+        description: Internal job id (e.g. job_xxx)
+
+  responses:
+    BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    UnprocessableEntity:
+      description: Unprocessable Entity
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    # ---------- Enums ----------
+    CustomerType:
+      type: string
+      enum: [INDIVIDUAL, BUSINESS]
+    CustomerStatus:
+      type: string
+      enum: [DRAFT, SUBMITTED, IN_REVIEW, APPROVED, REJECTED, EXPIRED]
+    DocumentKind:
+      type: string
+      enum: [ID_FRONT, ID_BACK, SELFIE, PROOF_OF_ADDRESS, BUSINESS_DOC, OTHER]
+    DocumentStatus:
+      type: string
+      enum: [UPLOADED, VALIDATED, REJECTED]
+    CheckType:
+      type: string
+      enum: [CPF_CNPJ, SANCTIONS, PEP, FACE_MATCH, LIVENESS, ADDRESS_MATCH]
+    CheckStatus:
+      type: string
+      enum: [PENDING, PASS, FAIL, INCONCLUSIVE]
+    JobKind:
+      type: string
+      enum: [RUN_CHECKS]
+    JobStatus:
+      type: string
+      enum: [PENDING, RUNNING, DONE, FAILED, CANCELED]
+
+    # ---------- Common ----------
+    Address:
+      type: object
+      additionalProperties: false
+      properties:
+        street: { type: string, minLength: 1 }
+        number: { type: string, minLength: 1 }
+        city: { type: string, minLength: 1 }
+        state: { type: string, minLength: 1, maxLength: 2 }
+        zip: { type: string, minLength: 1 }
+        country: { type: string, minLength: 2, maxLength: 2 }
+      required: [street, number, city, state, zip, country]
+
+    IndividualProfile:
+      type: object
+      additionalProperties: false
+      properties:
+        fullName: { type: string, minLength: 2 }
+        cpf: { type: string, minLength: 11, maxLength: 14 }
+        birthDate: { type: string, format: date }
+        nationality: { type: string, minLength: 2, maxLength: 2 }
+      required: [fullName, cpf, birthDate, nationality]
+
+    BusinessProfile:
+      type: object
+      additionalProperties: false
+      properties:
+        legalName: { type: string, minLength: 2 }
+        tradeName: { type: string }
+        cnpj: { type: string, minLength: 14, maxLength: 18 }
+        foundationDate: { type: string, format: date }
+      required: [legalName, cnpj, foundationDate]
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details:
+              type: object
+              additionalProperties: true
+          required: [code, message]
+      required: [error]
+
+    # ---------- Requests ----------
+    CreateCustomerRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        type:
+          $ref: "#/components/schemas/CustomerType"
+        profile:
+          oneOf:
+            - $ref: "#/components/schemas/IndividualProfile"
+            - $ref: "#/components/schemas/BusinessProfile"
+        address:
+          $ref: "#/components/schemas/Address"
+      required: [type, profile]
+      description: >
+        For INDIVIDUAL use IndividualProfile. For BUSINESS use BusinessProfile.
+
+    PatchCustomerRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        profile:
+          oneOf:
+            - $ref: "#/components/schemas/IndividualProfile"
+            - $ref: "#/components/schemas/BusinessProfile"
+        address:
+          $ref: "#/components/schemas/Address"
+      description: >
+        Only allowed while customer status is DRAFT. Provide only fields you want to update.
+
+    CreateDocumentRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          $ref: "#/components/schemas/DocumentKind"
+        fileUrl:
+          type: string
+          format: uri
+      required: [kind, fileUrl]
+
+    EnqueueChecksRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/CheckType"
+          minItems: 1
+          uniqueItems: true
+      required: [checks]
+
+    # ---------- Responses ----------
+    CustomerCreatedResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        type: { $ref: "#/components/schemas/CustomerType" }
+        status: { $ref: "#/components/schemas/CustomerStatus" }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, type, status, createdAt, updatedAt]
+
+    CustomerSummaryResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/CustomerStatus" }
+        updatedAt: { type: string, format: date-time }
+      required: [id, status, updatedAt]
+
+    DocumentResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        customerId: { type: string, format: uuid }
+        kind: { $ref: "#/components/schemas/DocumentKind" }
+        status: { $ref: "#/components/schemas/DocumentStatus" }
+        rejectionReason: { type: string, nullable: true }
+        uploadedAt: { type: string, format: date-time }
+      required: [id, customerId, kind, status, uploadedAt]
+
+    ListDocumentsResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        customerId: { type: string, format: uuid }
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentResponse"
+      required: [customerId, documents]
+
+    SubmitResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/CustomerStatus" }
+        submittedAt: { type: string, format: date-time }
+        requiredDocuments:
+          type: array
+          items: { $ref: "#/components/schemas/DocumentKind" }
+        missingDocuments:
+          type: array
+          items: { $ref: "#/components/schemas/DocumentKind" }
+      required: [id, status, submittedAt, requiredDocuments, missingDocuments]
+
+    CheckResult:
+      type: object
+      additionalProperties: false
+      properties:
+        checkType: { $ref: "#/components/schemas/CheckType" }
+        status: { $ref: "#/components/schemas/CheckStatus" }
+        score: { type: integer, minimum: 0, maximum: 100, nullable: true }
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+        updatedAt: { type: string, format: date-time }
+      required: [checkType, status, updatedAt]
+
+    ListChecksResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        customerId: { type: string, format: uuid }
+        results:
+          type: array
+          items: { $ref: "#/components/schemas/CheckResult" }
+        summary:
+          type: object
+          additionalProperties: false
+          properties:
+            pending: { type: integer, minimum: 0 }
+            pass: { type: integer, minimum: 0 }
+            fail: { type: integer, minimum: 0 }
+            inconclusive: { type: integer, minimum: 0 }
+          required: [pending, pass, fail, inconclusive]
+      required: [customerId, results, summary]
+
+    EnqueueChecksResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        jobId: { type: string }
+        customerId: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [QUEUED, ALREADY_RUNNING]
+        queuedAt: { type: string, format: date-time }
+        links:
+          type: object
+          additionalProperties: false
+          properties:
+            job: { type: string }
+            checks: { type: string }
+          required: [job, checks]
+      required: [jobId, customerId, status, queuedAt, links]
+
+    JobItem:
+      type: object
+      additionalProperties: false
+      properties:
+        checkType: { $ref: "#/components/schemas/CheckType" }
+        status:
+          type: string
+          enum: [PENDING, DONE, FAILED]
+        startedAt: { type: string, format: date-time, nullable: true }
+        finishedAt: { type: string, format: date-time, nullable: true }
+        error: { type: string, nullable: true }
+      required: [checkType, status]
+
+    GetJobResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        jobId: { type: string }
+        kind: { $ref: "#/components/schemas/JobKind" }
+        status: { $ref: "#/components/schemas/JobStatus" }
+        customerId: { type: string, format: uuid }
+        attempt: { type: integer, minimum: 0 }
+        maxAttempts: { type: integer, minimum: 1 }
+        nextRunAt: { type: string, format: date-time }
+        lockedBy: { type: string, nullable: true }
+        heartbeatAt: { type: string, format: date-time, nullable: true }
+        lastError: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        progress:
+          type: object
+          additionalProperties: false
+          properties:
+            total: { type: integer, minimum: 0 }
+            done: { type: integer, minimum: 0 }
+            failed: { type: integer, minimum: 0 }
+          required: [total, done, failed]
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/JobItem" }
+      required:
+        - jobId
+        - kind
+        - status
+        - customerId
+        - attempt
+        - maxAttempts
+        - nextRunAt
+        - createdAt
+        - updatedAt
+        - progress
+        - items
+
+    GetCustomerResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        type: { $ref: "#/components/schemas/CustomerType" }
+        status: { $ref: "#/components/schemas/CustomerStatus" }
+        profile:
+          oneOf:
+            - $ref: "#/components/schemas/IndividualProfile"
+            - $ref: "#/components/schemas/BusinessProfile"
+        address:
+          $ref: "#/components/schemas/Address"
+        documents:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              kind: { $ref: "#/components/schemas/DocumentKind" }
+              status: { $ref: "#/components/schemas/DocumentStatus" }
+            required: [kind, status]
+        checksSummary:
+          type: object
+          additionalProperties: false
+          properties:
+            pending: { type: integer, minimum: 0 }
+            pass: { type: integer, minimum: 0 }
+            fail: { type: integer, minimum: 0 }
+            inconclusive: { type: integer, minimum: 0 }
+          required: [pending, pass, fail, inconclusive]
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, type, status, createdAt, updatedAt]
