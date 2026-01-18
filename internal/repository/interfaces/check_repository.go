@@ -1,0 +1,7 @@
+package interfaces
+
+import "kyc-sim/internal/domain/models"
+
+type CheckRepository interface {
+	FindByCustomer(customerID string) ([]models.Check, error)
+}

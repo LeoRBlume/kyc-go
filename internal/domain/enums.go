@@ -5,6 +5,9 @@ type CustomerStatus string
 type DocumentKind string
 type DocumentStatus string
 
+type CheckType string
+type CheckStatus string
+
 const (
 	CustomerTypeIndividual CustomerType = "INDIVIDUAL"
 	CustomerTypeBusiness   CustomerType = "BUSINESS"
@@ -32,4 +35,18 @@ const (
 	DocumentUploaded  DocumentStatus = "UPLOADED"
 	DocumentValidated DocumentStatus = "VALIDATED"
 	DocumentRejected  DocumentStatus = "REJECTED"
+)
+
+const (
+	CheckCpfCnpj   CheckType = "CPF_CNPJ"
+	CheckSanctions CheckType = "SANCTIONS"
+	CheckPep       CheckType = "PEP"
+	CheckFaceMatch CheckType = "FACE_MATCH"
+)
+
+const (
+	CheckPending      CheckStatus = "PENDING"
+	CheckPass         CheckStatus = "PASS"
+	CheckFail         CheckStatus = "FAIL"
+	CheckInconclusive CheckStatus = "INCONCLUSIVE"
 )

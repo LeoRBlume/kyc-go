@@ -10,6 +10,7 @@ type Deps struct {
 	Health   *handler.HealthHandler
 	Customer *handler.CustomerHandler
 	Document *handler.DocumentHandler
+	Check    *handler.CheckHandler
 }
 
 func NewRouter(deps Deps) *gin.Engine {
@@ -31,6 +32,9 @@ func NewRouter(deps Deps) *gin.Engine {
 		//document
 		v1.POST("/customers/:id/documents", deps.Document.Create)
 		v1.GET("/customers/:id/documents", deps.Document.List)
+
+		//check
+		v1.GET("/customers/:id/checks", deps.Check.List)
 
 	}
 
