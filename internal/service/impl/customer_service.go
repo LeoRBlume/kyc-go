@@ -16,11 +16,18 @@ import (
 )
 
 type CustomerService struct {
-	repo repoif.CustomerRepository
+	repo         repoif.CustomerRepository
+	documentRepo repoif.DocumentRepository
 }
 
-func NewCustomerService(repo repoif.CustomerRepository) svcif.CustomerService {
-	return &CustomerService{repo: repo}
+func NewCustomerService(
+	repo repoif.CustomerRepository,
+	documentRepo repoif.DocumentRepository,
+) svcif.CustomerService {
+	return &CustomerService{
+		repo:         repo,
+		documentRepo: documentRepo,
+	}
 }
 
 func (s *CustomerService) Create(req requests.CreateCustomerRequest) (*models.Customer, error) {
@@ -99,4 +106,82 @@ func (s *CustomerService) Patch(id string, req requests.PatchCustomerRequest) (*
 	}
 
 	return customer, nil
+}
+
+func (s *CustomerService) Submit(id string) error {
+	customer, err := s.GetByID(id)
+	if err != nil {
+		return err
+	}
+
+	if customer.Status != domain.StatusDraft {
+		return &domain.DomainError{
+			Code:    domain.ErrConflict,
+			Message: "customer cannot be submitted in current status",
+			Details: map[string]any{
+				"currentStatus": customer.Status,
+				"allowedStatus": []string{string(domain.StatusDraft)},
+			},
+		}
+	}
+
+	// Documentos obrigatórios por tipo
+	required := []domain.DocumentKind{}
+	switch customer.Type {
+	case domain.CustomerTypeIndividual:
+		required = []domain.DocumentKind{
+			domain.DocumentIDFront,
+			domain.DocumentSelfie,
+		}
+	case domain.CustomerTypeBusiness:
+		required = []domain.DocumentKind{
+			domain.DocumentBusinessDoc,
+		}
+	}
+
+	// Buscar documentos
+	docs, err := s.documentRepo.FindByCustomer(customer.ID)
+	if err != nil {
+		return domain.NewInternal("failed to load documents", nil)
+	}
+
+	present := map[domain.DocumentKind]bool{}
+	for _, d := range docs {
+		present[d.Kind] = true
+	}
+
+	missing := []string{}
+	for _, r := range required {
+		if !present[r] {
+			missing = append(missing, string(r))
+		}
+	}
+
+	if len(missing) > 0 {
+		return &domain.DomainError{
+			Code:    domain.ErrValidation,
+			Message: "missing required documents",
+			Details: map[string]any{
+				"required": toStringSlice(required),
+				"missing":  missing,
+			},
+		}
+	}
+
+	customer.Status = domain.StatusSubmitted
+	customer.UpdatedAt = time.Now()
+
+	if err := s.repo.Update(customer); err != nil {
+		return domain.NewInternal("failed to submit customer", nil)
+	}
+
+	return nil
+}
+
+func toStringSlice(kinds []domain.DocumentKind) []string {
+	out := make([]string, 0, len(kinds))
+	for _, k := range kinds {
+		out = append(out, string(k))
+	}
+	return out
 }

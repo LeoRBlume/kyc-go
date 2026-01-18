@@ -14,16 +14,17 @@ import (
 
 type DocumentService struct {
 	customerRepo repoif.CustomerRepository
-	documentRepo repoif.DocumentRepository
+	repo         repoif.DocumentRepository
 }
 
 func NewDocumentService(
 	customerRepo repoif.CustomerRepository,
 	documentRepo repoif.DocumentRepository,
+
 ) svcif.DocumentService {
 	return &DocumentService{
 		customerRepo: customerRepo,
-		documentRepo: documentRepo,
+		repo:         documentRepo,
 	}
 }
 
@@ -47,7 +48,7 @@ func (s *DocumentService) Create(customerID string, req requests.CreateDocumentR
 		return nil, domain.NewValidation("fileUrl is required", nil)
 	}
 
-	exists, err := s.documentRepo.ExistsByCustomerAndKind(customerID, string(req.Kind))
+	exists, err := s.repo.ExistsByCustomerAndKind(customerID, string(req.Kind))
 	if err != nil {
 		return nil, domain.NewInternal("failed to validate document uniqueness", nil)
 	}
@@ -70,7 +71,7 @@ func (s *DocumentService) Create(customerID string, req requests.CreateDocumentR
 		UploadedAt: time.Now(),
 	}
 
-	if err := s.documentRepo.Create(doc); err != nil {
+	if err := s.repo.Create(doc); err != nil {
 		return nil, domain.NewInternal("failed to create document", nil)
 	}
 
@@ -81,5 +82,5 @@ func (s *DocumentService) List(customerID string) ([]models.Document, error) {
 	if _, err := s.customerRepo.FindByID(customerID); err != nil {
 		return nil, err
 	}
-	return s.documentRepo.FindByCustomer(customerID)
+	return s.repo.FindByCustomer(customerID)
 }

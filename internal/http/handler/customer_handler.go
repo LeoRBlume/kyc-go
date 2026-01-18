@@ -79,3 +79,22 @@ func (h *CustomerHandler) Patch(c *gin.Context) {
 		UpdatedAt: customer.UpdatedAt,
 	})
 }
+
+func (h *CustomerHandler) Submit(c *gin.Context) {
+	id := c.Param("id")
+
+	if err := h.service.Submit(id); err != nil {
+		middleware.WriteError(c, err)
+		return
+	}
+
+	customer, _ := h.service.GetByID(id)
+
+	c.JSON(http.StatusOK, responses.SubmitResponse{
+		ID:                customer.ID,
+		Status:            string(customer.Status),
+		SubmittedAt:       customer.UpdatedAt,
+		RequiredDocuments: nil, // apenas informativo; regra já validou
+		MissingDocuments:  []string{},
+	})
+}

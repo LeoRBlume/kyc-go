@@ -35,7 +35,7 @@ func BuildApp() (*App, error) {
 	documentRepo := gormrepo.NewDocumentRepo(gdb)
 
 	// Services
-	customerService := svcimpl.NewCustomerService(customerRepo)
+	customerService := svcimpl.NewCustomerService(customerRepo, documentRepo)
 	documentService := svcimpl.NewDocumentService(customerRepo, documentRepo)
 
 	// Handlers
