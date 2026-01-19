@@ -2,6 +2,7 @@ package handler
 
 import (
 	"kyc-sim/internal/domain"
+	"kyc-sim/internal/dto/requests"
 	"net/http"
 
 	"kyc-sim/internal/dto/responses"
@@ -12,11 +13,12 @@ import (
 )
 
 type CheckHandler struct {
-	service svcif.CheckService
+	service    svcif.CheckService
+	kycService svcif.KycService
 }
 
-func NewCheckHandler(service svcif.CheckService) *CheckHandler {
-	return &CheckHandler{service: service}
+func NewCheckHandler(service svcif.CheckService, kycService svcif.KycService) *CheckHandler {
+	return &CheckHandler{service: service, kycService: kycService}
 }
 
 func (h *CheckHandler) List(c *gin.Context) {
@@ -55,4 +57,32 @@ func (h *CheckHandler) List(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, resp)
+}
+
+func (h *CheckHandler) Run(c *gin.Context) {
+	customerID := c.Param("id")
+
+	var req requests.RunChecksRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		middleware.WriteBindError(c, err)
+		return
+	}
+
+	job, reused, err := h.kycService.EnqueueRunChecks(customerID, req)
+	if err != nil {
+		middleware.WriteError(c, err)
+		return
+	}
+
+	status := "QUEUED"
+	if reused {
+		status = "ALREADY_RUNNING"
+	}
+
+	c.JSON(http.StatusAccepted, responses.EnqueueChecksResponse{
+		JobID:      job.ID,
+		CustomerID: job.CustomerID,
+		Status:     status,
+		QueuedAt:   job.CreatedAt,
+	})
 }

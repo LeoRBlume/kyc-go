@@ -20,3 +20,7 @@ func (r *CheckRepo) FindByCustomer(customerID string) ([]models.Check, error) {
 	err := r.db.Where("customer_id = ?", customerID).Find(&checks).Error
 	return checks, err
 }
+
+func (r *CheckRepo) Create(check *models.Check) error {
+	return r.db.Create(check).Error
+}

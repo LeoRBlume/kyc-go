@@ -8,6 +8,9 @@ type DocumentStatus string
 type CheckType string
 type CheckStatus string
 
+type JobKind string
+type JobStatus string
+
 const (
 	CustomerTypeIndividual CustomerType = "INDIVIDUAL"
 	CustomerTypeBusiness   CustomerType = "BUSINESS"
@@ -49,4 +52,16 @@ const (
 	CheckPass         CheckStatus = "PASS"
 	CheckFail         CheckStatus = "FAIL"
 	CheckInconclusive CheckStatus = "INCONCLUSIVE"
+)
+
+const (
+	JobRunChecks JobKind = "RUN_CHECKS"
+)
+
+const (
+	JobPending  JobStatus = "PENDING"
+	JobRunning  JobStatus = "RUNNING"
+	JobDone     JobStatus = "DONE"
+	JobFailed   JobStatus = "FAILED"
+	JobCanceled JobStatus = "CANCELED"
 )

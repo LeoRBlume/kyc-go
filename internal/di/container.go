@@ -34,17 +34,19 @@ func BuildApp() (*App, error) {
 	customerRepo := gormrepo.NewCustomerRepo(gdb)
 	documentRepo := gormrepo.NewDocumentRepo(gdb)
 	checkRepo := gormrepo.NewCheckRepo(gdb)
+	jobRepo := gormrepo.NewJobRepo(gdb)
 
 	// Services
 	customerService := svcimpl.NewCustomerService(customerRepo, documentRepo)
 	documentService := svcimpl.NewDocumentService(customerRepo, documentRepo)
 	checkService := svcimpl.NewCheckService(customerRepo, checkRepo)
+	kycService := svcimpl.NewKycService(customerRepo, jobRepo, checkRepo)
 
 	// Handlers
 	healthHandler := handler.NewHealthHandler()
 	customerHandler := handler.NewCustomerHandler(customerService)
 	documentHandler := handler.NewDocumentHandler(documentService)
-	checkHandler := handler.NewCheckHandler(checkService)
+	checkHandler := handler.NewCheckHandler(checkService, kycService)
 
 	// Router
 	r := router.NewRouter(router.Deps{
