@@ -184,14 +184,62 @@ Regras aplicadas pelo Worker:
 
 ---
 
-## Como Executar
+## Como Executar o Projeto
 
+Este projeto foi pensado para ser executado de forma **explícita**, usando apenas **variáveis de ambiente**.
+Isso facilita o uso local, CI/CD e futura integração com Kubernetes (ConfigMap / Secret).
+
+Você pode rodar de **três formas**:
+1. Comandos diretos (recomendado para entender o funcionamento)
+2. Usando SQLite (rápido, sem dependências)
+3. Usando PostgreSQL (mais próximo de produção)
+4. (Opcional) Usando Makefile
+
+---
+
+### Opção 1 — Execução Rápida com SQLite (Local)
+
+#### 1. Criar diretório do banco
 ```bash
 mkdir data
-go run ./cmd/api
 ```
 
-O banco SQLite será criado automaticamente.
+#### 2. Executar a aplicação
+```bash
+DB_DRIVER=sqlite DB_PATH=./data/kyc.db HTTP_PORT=8080 APP_ENV=local go run ./cmd/api
+```
+
+O banco SQLite será criado automaticamente no diretório `./data`.
+
+---
+
+### Opção 2 — Execução com PostgreSQL (Local)
+
+##### 1. Subir o banco via Docker Compose
+```bash
+docker compose up -d postgres
+```
+
+### 2. Executar a aplicação
+```bash
+DB_DRIVER=postgres DB_HOST=localhost DB_PORT=5432 DB_USER=postgres DB_PASSWORD=postgres DB_NAME=kyc DB_SSLMODE=disable DB_TIMEZONE=UTC HTTP_PORT=8080 APP_ENV=dev go run ./cmd/api
+```
+
+## Variáveis de Ambiente Utilizadas
+
+| Variável        | Descrição |
+|-----------------|-----------|
+| APP_ENV         | Ambiente da aplicação (`local`, `dev`, `hml`, `prod`) |
+| HTTP_PORT / PORT| Porta HTTP da API |
+| DB_DRIVER       | Driver do banco (`sqlite` ou `postgres`) |
+| DB_PATH         | Caminho do SQLite |
+| DB_HOST         | Host do PostgreSQL |
+| DB_PORT         | Porta do PostgreSQL |
+| DB_USER         | Usuário do PostgreSQL |
+| DB_PASSWORD     | Senha do PostgreSQL |
+| DB_NAME         | Nome do banco |
+| DB_SSLMODE      | SSL Mode do PostgreSQL |
+| DB_TIMEZONE     | Timezone do banco |
 
 ---
 

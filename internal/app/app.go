@@ -22,9 +22,12 @@ type App struct {
 }
 
 func BuildApp() (*App, error) {
-	cfg := config.Load()
+	cfg, errConfig := config.Load()
+	if errConfig != nil {
+		return nil, errConfig
+	}
 
-	gdb, err := db.NewGormDB(cfg)
+	gdb, err := db.NewGormDB(*cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +79,7 @@ func BuildApp() (*App, error) {
 	go runner.Start()
 
 	return &App{
-		Config: cfg,
+		Config: *cfg,
 		DB:     gdb,
 		Router: r,
 	}, nil
