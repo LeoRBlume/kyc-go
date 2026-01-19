@@ -187,6 +187,7 @@ Regras aplicadas pelo Worker:
 ## Como Executar
 
 ```bash
+mkdir data
 go run ./cmd/api
 ```
 
