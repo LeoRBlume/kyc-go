@@ -103,3 +103,12 @@ func (r *JobRepo) ListItems(jobID string) ([]models.JobItem, error) {
 func (r *JobRepo) UpdateItem(item *models.JobItem) error {
 	return r.db.Save(item).Error
 }
+
+func (r *JobRepo) GetByID(jobID string) (*models.Job, error) {
+	var job models.Job
+	err := r.db.First(&job, "id = ?", jobID).Error
+	if err != nil {
+		return nil, err
+	}
+	return &job, nil
+}

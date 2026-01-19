@@ -14,4 +14,5 @@ type JobRepository interface {
 	MarkFailed(jobID string, errMsg string) error
 	ListItems(jobID string) ([]models.JobItem, error)
 	UpdateItem(item *models.JobItem) error
+	GetByID(jobID string) (*models.Job, error)
 }

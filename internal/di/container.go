@@ -42,12 +42,14 @@ func BuildApp() (*App, error) {
 	documentService := svcimpl.NewDocumentService(customerRepo, documentRepo)
 	checkService := svcimpl.NewCheckService(customerRepo, checkRepo)
 	kycService := svcimpl.NewKycService(customerRepo, jobRepo, checkRepo)
+	jobService := svcimpl.NewJobService(jobRepo)
 
 	// Handlers
 	healthHandler := handler.NewHealthHandler()
 	customerHandler := handler.NewCustomerHandler(customerService)
 	documentHandler := handler.NewDocumentHandler(documentService)
 	checkHandler := handler.NewCheckHandler(checkService, kycService)
+	jobHandler := handler.NewJobHandler(jobService)
 
 	// Router
 	r := router.NewRouter(router.Deps{
@@ -55,6 +57,7 @@ func BuildApp() (*App, error) {
 		Customer: customerHandler,
 		Document: documentHandler,
 		Check:    checkHandler,
+		Job:      jobHandler,
 	})
 
 	processor := worker.NewProcessor(jobRepo, checkRepo, customerRepo)
