@@ -24,3 +24,7 @@ func (r *CheckRepo) FindByCustomer(customerID string) ([]models.Check, error) {
 func (r *CheckRepo) Create(check *models.Check) error {
 	return r.db.Create(check).Error
 }
+
+func (r *CheckRepo) Update(check *models.Check) error {
+	return r.db.Save(check).Error
+}

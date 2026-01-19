@@ -7,6 +7,7 @@ import (
 	"kyc-sim/internal/http/router"
 	gormrepo "kyc-sim/internal/repository/gorm"
 	svcimpl "kyc-sim/internal/service/impl"
+	"kyc-sim/internal/worker"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -55,6 +56,10 @@ func BuildApp() (*App, error) {
 		Document: documentHandler,
 		Check:    checkHandler,
 	})
+
+	processor := worker.NewProcessor(jobRepo, checkRepo, customerRepo)
+	runner := worker.NewRunner(jobRepo, processor, "worker-1")
+	go runner.Start()
 
 	return &App{
 		Config: cfg,
