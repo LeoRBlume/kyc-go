@@ -1,6 +1,7 @@
 package router
 
 import (
+	handlergraphql "kyc-sim/internal/graphql/handler"
 	"kyc-sim/internal/http/handler"
 
 	"github.com/gin-gonic/gin"
@@ -12,6 +13,7 @@ type Deps struct {
 	Document *handler.DocumentHandler
 	Check    *handler.CheckHandler
 	Job      *handler.JobHandler
+	GraphQL  *handlergraphql.GraphQLHandler
 }
 
 func NewRouter(deps Deps) *gin.Engine {
@@ -25,7 +27,7 @@ func NewRouter(deps Deps) *gin.Engine {
 	{
 		//customer
 		v1.POST("/customers", deps.Customer.Create)
-		v1.GET("/customers/:id", deps.Customer.GetByID)
+		v1.POST("/graphql", deps.GraphQL.Serve)
 		v1.PATCH("/customers/:id", deps.Customer.Patch)
 
 		v1.POST("/customers/:id/submit", deps.Customer.Submit)
@@ -40,7 +42,6 @@ func NewRouter(deps Deps) *gin.Engine {
 
 		//job
 		v1.GET("/jobs/:jobId", deps.Job.Get)
-
 	}
 
 	return r

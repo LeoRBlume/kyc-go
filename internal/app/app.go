@@ -1,8 +1,10 @@
-package di
+package app
 
 import (
 	"kyc-sim/internal/config"
 	"kyc-sim/internal/db"
+	handlergraphql "kyc-sim/internal/graphql/handler"
+	gqlschema "kyc-sim/internal/graphql/schema"
 	"kyc-sim/internal/http/handler"
 	"kyc-sim/internal/http/router"
 	gormrepo "kyc-sim/internal/repository/gorm"
@@ -43,6 +45,7 @@ func BuildApp() (*App, error) {
 	checkService := svcimpl.NewCheckService(customerRepo, checkRepo)
 	kycService := svcimpl.NewKycService(customerRepo, jobRepo, checkRepo)
 	jobService := svcimpl.NewJobService(jobRepo)
+	readSvc := svcimpl.NewCustomerReadService(customerRepo, documentRepo, checkRepo, jobRepo)
 
 	// Handlers
 	healthHandler := handler.NewHealthHandler()
@@ -51,6 +54,13 @@ func BuildApp() (*App, error) {
 	checkHandler := handler.NewCheckHandler(checkService, kycService)
 	jobHandler := handler.NewJobHandler(jobService)
 
+	gqlSchema, err := gqlschema.NewSchema(readSvc)
+	if err != nil {
+		return nil, err
+	}
+
+	gqlHandler := handlergraphql.NewGraphQLHandler(gqlSchema)
+
 	// Router
 	r := router.NewRouter(router.Deps{
 		Health:   healthHandler,
@@ -58,6 +68,7 @@ func BuildApp() (*App, error) {
 		Document: documentHandler,
 		Check:    checkHandler,
 		Job:      jobHandler,
+		GraphQL:  gqlHandler,
 	})
 
 	processor := worker.NewProcessor(jobRepo, checkRepo, customerRepo)

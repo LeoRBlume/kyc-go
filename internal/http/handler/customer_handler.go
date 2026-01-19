@@ -40,24 +40,6 @@ func (h *CustomerHandler) Create(c *gin.Context) {
 	})
 }
 
-func (h *CustomerHandler) GetByID(c *gin.Context) {
-	id := c.Param("id")
-
-	customer, err := h.service.GetByID(id)
-	if err != nil {
-		middleware.WriteError(c, err)
-		return
-	}
-
-	c.JSON(http.StatusOK, responses.GetCustomerResponse{
-		ID:        customer.ID,
-		Type:      string(customer.Type),
-		Status:    string(customer.Status),
-		CreatedAt: customer.CreatedAt,
-		UpdatedAt: customer.UpdatedAt,
-	})
-}
-
 func (h *CustomerHandler) Patch(c *gin.Context) {
 	id := c.Param("id")
 

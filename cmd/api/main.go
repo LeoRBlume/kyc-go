@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"kyc-sim/internal/di"
+	"kyc-sim/internal/app"
 	"log"
 )
 
 func main() {
-	app, err := di.BuildApp()
+	app, err := app.BuildApp()
 	if err != nil {
 		log.Fatalf("bootstrap failed: %v", err)
 	}
